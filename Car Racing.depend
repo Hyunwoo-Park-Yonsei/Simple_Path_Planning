@@ -1,0 +1,24 @@
+# depslib dependency file v1.0
+1525660758 source:/home/nguyenhopquang/C++/Cuoi Ki/main.cpp
+	<SFML/Graphics.hpp>
+	<SFML/Audio.hpp>
+	<iostream>
+	<cstdlib>
+	<ctime>
+	<string>
+
+1627237336 source:/home/kevin/car_racing/CarRacing-master/main.cpp
+	<SFML/Graphics.hpp>
+	<SFML/Audio.hpp>
+	<iostream>
+	<cstdlib>
+	<ctime>
+	<string>
+	<vector>
+	<unistd.h>
+	<time.h>
+	<cmath>
+	<algorithm>
+	<random>
+	<deque>
+
