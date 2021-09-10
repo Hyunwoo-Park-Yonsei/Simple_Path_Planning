@@ -13,7 +13,7 @@
 
 
 
-## Procedure (2021 Jun ~ Jul)
+## Procedure 1 (2021 Jun ~ Jul)
 
 ### Kinematic Modeling
 
@@ -45,7 +45,7 @@
 * Basic concepts of path planning.
 * How to deal with codes over 500 lines and with lots of functions.(Got used to handle the flow of long codes.)
 
-## Procedure (2021 Sept~ Sept)
+## Procedure 2 (2021 Sept~ Sept)
 
 ### Waypoints
 * I have planned waypoints to have minimum acceleration.
