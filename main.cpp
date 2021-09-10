@@ -36,15 +36,17 @@ int getRandomLane();
 int getRandomnumber();
 // Create gameover screen
 int gameOver();
-
+int LaneNumTransform(int num);
 
 bool sortseccol(const vector<double>& t1, const vector<double>& t2)
 {
     return t1[1] > t2[1];
 }
 
-void move_car(double *X,double *Y, double &steer, Sprite &racer, float &a, double &throttle)
+float move_car(double *X,double *Y, double &steer, Sprite &racer, float &a, double &speed)
 {
+
+
     double s = sqrt(22.5*22.5 + 35*35);
     *X += s*cos(a);
     *Y += s*sin(a);
@@ -54,186 +56,144 @@ void move_car(double *X,double *Y, double &steer, Sprite &racer, float &a, doubl
 
     racer.rotate(steer);
     float head_angle = a - atan(35.0/22.5);
-    *X += throttle*sin(head_angle);
-    *Y -= throttle*cos(head_angle) - 0.1;
-//    cout << "head angle" << head_angle <<endl;
-//    cout << throttle*cos(head_angle) - 1.0 << endl;
-//    cout << "rotate_car function!" << endl;
+    *X += speed*sin(head_angle);
+    *Y -= speed*cos(head_angle);
+
+    return head_angle;
 }
 
-
-
-void lateral_control(int &t, double * steer, int &direction, double *X,double *Y, vector <double> &point, bool &rotating, int &state, int &state_change_time, double &velocity)
-{
-    if(*X - point[0] > 0){direction = -1;}
-    else{direction = 1;}
-
-    if(state == 1)
-    {
-        if(t - state_change_time < 1000)
-        {
-            if(t-state_change_time <500)
-            {
-                *steer = 0.035*direction*(t-state_change_time)/500;
-            }
-            else{*steer = 0.035*direction*(1000+state_change_time-t)/500;}
-
-            return;
-        }
-        else
-        {
-            state = 2;
-            return;
-        }
-    }
-    if(state ==2)
-    {
-        if(abs(point[0]-*X) > 5)
-        {
-            *steer = 0;
-            if(velocity*(point[0]-*X) < 0)
-            {
-                state = 5;
-                state_change_time =t;
-                return;
-            }
-
-            return;
-        }
-        else
-        {
-            state = 3;
-            state_change_time = t;
-            return;
-        }
-    }
-    if(state == 3)
-    {
-        if(t - state_change_time < 1000)
-        {
-            if(t-state_change_time <500)
-            {
-                *steer = 0.035*direction*(t-state_change_time)/500;
-            }
-            else{*steer = 0.035*direction*(1000+state_change_time-t)/500;}
-
-            return;
-        }
-        else
-        {
-            state = 4;
-            return;
-        }
-    }
-    if(state ==4)
-    {
-        if(abs(point[0]-*X) > 5)
-        {
-            state = 1;
-            state_change_time = t;
-            *steer = 0;
-            return;
-        }
-        else{return;}
-    }
-    if(state ==5){
-//        cout << "it is state 5 " << endl;
-        if(t - state_change_time < 1000)
-        {
-            if(t-state_change_time <500)
-            {
-                *steer = 0.07*direction*(t-state_change_time)/500;
-            }
-            else{*steer = 0.07*direction*(1000+state_change_time-t)/500;}
-
-            return;
-        }
-        else
-        {
-            state = 2;
-            return;
-        }
-
-    }
-}
-//void waypoints(RenderWindow &app, int &k)
-//{
-//    CircleShape circle1(5);
-//    circle1.setFillColor(sf::Color(50, 250, 50));
-//    circle1.setPosition(400+17.5,k+35);
-//    app.draw(circle1);
-//}
-
-void waypoint(vector <double> &point,vector <vector <double>> &v, vector <int> &center_road)
-{
-//    point[0] = 200;
-//    point[1] = 430;
-    vector <int> availability = {1,1,1,1};
-    vector <double> nearest_car;
-    for(int i = 0; i < 4; i++)
-    {
-//        cout << "!!" << endl;
-        if(v[i][1] > 100)
-        {
-            nearest_car.push_back(v[i][0]);
-//            cout << nearest_car.size() << endl;
-        }
-
-    }
-    for(int i = 0; i<4; i++)
-    {
-        for(int j = 0; j < nearest_car.size(); j++)
-        {
-            if(abs(nearest_car[j] - center_road[i]) < 40)
-            {
-                    // a center road must have some distance to all nearest car
-                    availability[i] *= 0;
-            }
-        }
-    }
-    int q = nearest_car.size();
-//    cout << q << endl;
-    for(int k = 0; k < q; k ++)
-    {
-        nearest_car.pop_back();
-    }
-
-    for(int i =0; i < 4; i++)
-    {
-        if(availability[i] == 1){point[0] = center_road[i];}
-    }
-
-}
-
-void longitudinal_control(vector <double> &point, double *X,double *Y, double &throttle)
+vector <double> cartesian_to_frenet(vector <double> &pos, vector <double> &frenet_pos, double &frenet_s)
 {
 
-    throttle = 0.1 + (*Y - point[1])*0.0003;
+    frenet_pos[0] = (pos[0] - 400)* 2.7 /400;
+    frenet_pos[1] = frenet_s+ (800 - pos[1]);
+
+
+    return frenet_pos;
 }
 
-void lane_change(deque <deque<double>> &dq, vector <double> road_center, int &new_lane, int &old_lane, vector <vector <double>> v){
-    cout << "lane_change function" << endl;
-    for(int i =0; i < 4; i++){
-        cout << i << endl;
-        int a = find(road_center.begin(), road_center.end(), v[i][0])-road_center.begin();
-        if(a!=road_center.size()){road_center.erase(road_center.begin() + a);}
+vector <double> frenet_to_cartesian(vector <double> &frenet_pos)
+{
+    vector <double> pos;
+
+    pos.push_back(frenet_pos[0] * 400 / 2.7);
+    pos.push_back(-frenet_pos[1]);
+
+    return pos;
+}
+
+
+void everythingsgodown(double &RacerY, vector <vector <double>> &wps)
+{
+    RacerY += 0.05;
+    for(int i = 0; i < wps.size(); i++)
+    {
+        wps[i][1] += 0.05;
     }
-    cout << "iteration finished" << endl;
-    int dist = 800;
-    for(int i = 0; i< road_center.size(); i++){
-        if (dist > road_center[i] - old_lane && road_center[i] != -1){
-            new_lane = road_center[i];
-            dist = road_center[i] - old_lane;
+}
+
+
+vector <vector <double>> right_path_init() {
+    vector <vector <double>> right_path;
+
+    for(double i= 0; i<0.86; i = i +0.01){
+        right_path.push_back({i,800*pow((i-0.43),3) + 200*i + 75});
+    }
+
+    return right_path;
+}
+
+vector <vector <double>> left_path_init() {
+    vector <vector <double>> left_path;
+
+    for(double i= 0; i<0.86; i = i +0.01){
+        left_path.push_back({-i,800*pow((i-0.43),3) + 200*i + 75});
+    }
+    return left_path;
+}
+
+vector <vector <double>> waypoints_init(){
+    vector <vector <double>> waypoint;
+    int t = LaneNumTransform(2);
+    for(int i = 600; i > 0; i = i - 5){waypoint.push_back({t,i});}
+    return waypoint;
+}
+
+double longitudinal_control(double RacerY){
+    int ths = 430;
+    float k = 0.0003;
+    return k*(RacerY - ths) + 0.05;
+}
+
+double stanley_control(double RacerX, double RacerY, float head_angle, vector <double> closest_wp, double speed){
+    double steer = 0;
+    float k = 0.001;
+    double position_error = -RacerX + closest_wp[0];
+    double heading_error = closest_wp[2] - head_angle;
+    double cte = atan2(k*position_error,speed);
+//    cout << endl;
+//    cout << "position error " << position_error << endl;
+//    cout << "cte " << cte << endl;
+    cout << "heading error " << heading_error << endl;
+    cout << "head_angle " << head_angle << endl;
+    cout << "closest_wp[2] " << closest_wp[2] << endl;
+    cout << endl;
+
+    steer = heading_error + cte;
+    return steer;
+}
+
+vector <double> find_closest_wp(double RacerY,vector <vector <double>> waypoints){
+    vector <double> closest_wp = {0,0,0};
+    double min_dist = 600;
+    double yaw;
+    for(int i = 0; i < waypoints.size(); i++){
+        if(waypoints[i][1] - RacerY < 0){
+            if(closest_wp[0] == waypoints[i][0]){return closest_wp;}
+            double yaw = M_PI/2 - atan2((closest_wp[1]-waypoints[i][1]),(closest_wp[0]-waypoints[i][0]));
+            closest_wp[2] = -yaw;
+            return closest_wp;
+            }
+        closest_wp[0] = waypoints[i][0];
+        closest_wp[1] = waypoints[i][1];
+    }
+    return closest_wp;
+}
+
+int collision_check(double RacerX,double RacerY, double Obs1X,double Obs1Y,double Obs2X,double Obs2Y, int main_lane){
+    vector <double> obstacleX = {Obs1X, Obs2X};
+    vector <double> obstacleY = {Obs1Y, Obs2Y};
+    if(main_lane > 2){
+        cout << "just left !!!!!!!!!!!!!!!" << endl;
+        return -1;
+
+    }
+    else if(main_lane < 2){
+        cout << "just right!!!!!!!!!!!!!!!!!!!!1 " << endl;
+        return 1;
+    }
+    for(int i= 0; i<2; i++){
+            if(abs(obstacleX[i] - RacerX - 130) < 30 && abs(RacerY - obstacleY[i] -175) > 30 ){return -1;}
+    }
+    return 1;
+}
+
+int collision_check2(double RacerX,double RacerY, double Obs1X,double Obs1Y,double Obs2X,double Obs2Y,int main_lane){
+    vector <double> obstacleX = {Obs1X, Obs2X};
+    vector <double> obstacleY = {Obs1Y, Obs2Y};
+    if(main_lane == 1){
+        for(int i= 0; i<2; i++){
+            if(obstacleX[i] != 340){return 1;}
         }
     }
-
-    for(int i =15; i > -1; i--){
-        dq[i][0] = old_lane + (new_lane-old_lane)*(16-i)/16;
-        cout << "old " << old_lane << endl;
-        cout << "new " << new_lane << endl;
+    else if(main_lane == 3){
+        for(int i= 0; i<2; i++){
+            if(obstacleX[i] != 340){return -1;}
+        }
     }
-    old_lane = new_lane;
 }
+
+
 
 int main()
 {
@@ -265,34 +225,28 @@ int main()
     double RacerX, RacerY,Obs1X, Obs1Y,Obs2X, Obs2Y,Obs3X, Obs3Y,Obs4X, Obs4Y;
 
 
-    vector <vector<double>> v;
-    int t = 0;
-    int direction = 0;
-    vector <double> point = {210,430};
-    int state_change_time = 0;
-
     float angle = atan(35.0/22.5);
     double steer = 0.00;
-    bool rotating = false;
-    int state = 4;
-    double throttle = 0.10;
-    deque <deque <double>> dq;
-    for(int i = 0; i < 22; i++){
-    dq.push_back({350, i*20+10});
-    }
-    vector <vector <double>> main_points;
+    double speed = 0.05;
 
     vector <double> road_center = {210,340,470,600,-1};
-    int new_lane = road_center[1];
-    int old_lane = road_center[1];
-    bool lane_changed = false;
+    double frenet_s = 0;
 
-
+    vector <vector <double>> waypoints_left = left_path_init();
+    vector <vector <double>> waypoints_right = right_path_init();
+    vector <vector <double>> waypoints = waypoints_init();
+    vector <vector <double>> avoid_wps;
+    int state = 1;
+    int main_lane = 2;
+    float head_angle;
+    vector <double> closest_wp;
 
 
 
     //Set racer and Obs pos
-	RacerX=SCREEN_WIDTH/2;
+//	RacerX=SCREEN_WIDTH/2;
+    // 340, 430
+    RacerX = 340;
 	RacerY=SCREEN_HEIGH-racerHeight - 100;
 
 
@@ -308,19 +262,20 @@ int main()
     Obs1Y=0,Obs2Y=-150,Obs3Y=-300,Obs4Y=-450;
     double BackgroundY1=0;
     double BackgroundY2=-600;
-    bool avoiding = false;
-    GameSound.play();
-    GameSound.setLoop(true);
-    double RacerX_history;
-    double lateral_velocity = 0;
+
+    //GameSound.play();
+    //GameSound.setLoop(true);
 
     //game loop
-
+    vector <double> pos = {RacerX,RacerY};
+    vector <double> frenet_pos = {0,0};
+    int dir = 0;
+    double new_lane_posx = -1;
+    double new_lane_posy = 0;
 
 
     while (app.isOpen())
     {
-
 
         //Init and count score
         stringscore="SCORE:"+to_string(score);
@@ -338,6 +293,25 @@ int main()
         Obs3.setPosition(600,Obs3Y);
         Obs4.setPosition(600,Obs4Y);
 
+        Event event;
+        while (app.pollEvent(event))
+        {
+            if (event.type == Event::Closed)
+                app.close();
+            if (event.type == sf::Event::KeyPressed)
+                {
+                    if (event.key.code == sf::Keyboard::Left)
+                        {if(RacerX>borderLeft) {RacerX=RacerX-10;}}
+                    if (event.key.code == sf::Keyboard::Right)
+                        {if(RacerX<borderRight){RacerX=RacerX+10;}}
+                    if (event.key.code == sf::Keyboard::Up)
+                        {if(RacerY>0){RacerY=RacerY-50;}}
+                    if (event.key.code == sf::Keyboard::Down)
+                        {if(RacerY<SCREEN_HEIGH-70){head_angle = -1.4;}}
+                }
+        }
+
+
 
         //Creat scrolling background
         Background.setPosition(0,BackgroundY1);
@@ -347,8 +321,12 @@ int main()
             BackgroundY1=0;
             BackgroundY2=BackgroundY1-500;
         }
-        BackgroundY1+=0.1;
-        BackgroundY2+=0.1;
+        BackgroundY1+=0.05;
+        BackgroundY2+=0.05;
+
+
+        frenet_s += 0.05;
+
 
         //Set Obs LOOP
         if (Obs1Y>SCREEN_HEIGH)
@@ -363,47 +341,45 @@ int main()
 
 
 
-//        cout << Obs1X << Obs2X << Obs3X << Obs4X << endl;
-        v.push_back({Obs1X,Obs1Y});
-        v.push_back({Obs2X,Obs2Y});
-        v.push_back({Obs3X,Obs3Y});
-        v.push_back({Obs4X,Obs4Y});
-        sort(v.begin(),v.end(),sortseccol);
-
-
-//        waypoint(point, v, center_road);
-        point[0] = dq[21][0];
-
-        lateral_control(t, &steer, direction, & RacerX, & RacerY, point, rotating, state, state_change_time, lateral_velocity);
-        longitudinal_control(point, & RacerX, & RacerY, throttle);
-
-
-        RacerX_history = RacerX;
-        move_car(&RacerX,&RacerY, steer, Racer, angle, throttle);
-        lateral_velocity = -RacerX_history + RacerX;
+        frenet_pos[1] = frenet_s;
+        pos[0] = RacerX;
+        pos[1] = RacerY;
 
 
 
+        head_angle = move_car(&RacerX,&RacerY, steer, Racer, angle, speed);
+        speed = longitudinal_control(RacerY);
+
+        frenet_pos = cartesian_to_frenet(pos,frenet_pos, frenet_s);
+//        cout << "position in the simulation" << pos[0] << " " << pos[1] << endl;
+//        cout << "frenet " << frenet_pos[0] << " " << frenet_pos[1] << endl;
+//        cout << "last wp " << waypoints.back()[0] << " " << waypoints.back()[1] << endl;
+//        cout << "first wp " << waypoints[0][0] << " " << waypoints[0][1] << endl;
+//        // head angle is radian
+//        cout << "head angle " << head_angle << endl;
+//        cout << "steer " << steer << endl;
+//        cout << "speed " << speed << endl;
+        cout << " " << endl;
 
 
-        t++;
-        Event event;
-        while (app.pollEvent(event))
-        {
-            if (event.type == Event::Closed)
-                app.close();
-            if (event.type == sf::Event::KeyPressed)
-                {
-                    if (event.key.code == sf::Keyboard::Left)
-                        {if(RacerX>borderLeft) {RacerX=RacerX-10;}}
-                    if (event.key.code == sf::Keyboard::Right)
-                        {if(RacerX<borderRight){RacerX=RacerX+10;}}
-                    if (event.key.code == sf::Keyboard::Up)
-                        {if(RacerY>0){RacerY=RacerY-10;}}
-                    if (event.key.code == sf::Keyboard::Down)
-                        {if(RacerY<SCREEN_HEIGH-70){RacerY=RacerY+10;}}
-                }
-        }
+
+
+        closest_wp = find_closest_wp(RacerY,waypoints);
+        steer = stanley_control(RacerX,RacerY, head_angle,closest_wp,speed);
+
+
+
+
+        everythingsgodown(RacerY, waypoints);
+
+        // erasing waypoint that go overs the screen
+
+        if(waypoints.size() > 0){
+            if(waypoints[0][1] > 600){
+                waypoints.erase(waypoints.begin());}}
+
+
+
 
 
         //Check if accident happen
@@ -428,22 +404,16 @@ int main()
                 GameSound.stop();gameOver();
             };
 
-        sf::CircleShape shape(5);
-        // set the shape color to green
-        shape.setFillColor(sf::Color(50, 250, 50));
-        shape.setPosition(point[0]+17.5,point[1]+35);
 
 
-//        waypoints(app, waypoints_ylist[2]);
-//        cout << waypoints_ylist[2] << endl;
+
 
 
         //Clear and redraw position
 
         app.clear();
 
-        sf::CircleShape point(5);
-
+        CircleShape wp(5);
 
         app.draw(Background);
         app.draw(Background1);
@@ -452,43 +422,120 @@ int main()
         app.draw(Obs2);
         app.draw(Obs3);
         app.draw(Obs4);
-        app.draw(shape);
-
-
-        for(int i = 0; i < dq.size(); i++){
-            dq[i][1] += 0.1;
-        }
-
-
-        for(int i =0; i < dq.size(); i++){
-
-            point.setFillColor(sf::Color(50, 250, 50));
-            point.setPosition(dq[i][0]+ 17.5,dq[i][1]+35);
-            app.draw(point);
-        }
-
-        for(int i=0; i < 4; i++)
-        {
-            if(dq[5][0] - v[i][1] < 300 && abs(dq[5][0]-v[i][0]) < 70 && lane_changed == false){
-                cout << "?" << endl;
-                lane_change(dq,road_center, new_lane, old_lane, v);
-                lane_changed = true;
-            }
-            else{lane_changed = false;}
-
-            // re-making point
-            if(dq[21][1]> 430)
-            {
-                dq.pop_back();
-                dq.push_front({new_lane,0});
-            }
-        }
-        v.pop_back();
-        v.pop_back();
-        v.pop_back();
-        v.pop_back();
 
         app.draw(text);
+
+
+        cout << "state  " << state << endl;
+        cout << "main lane " << main_lane << endl;
+
+        //RacerX 와 RacerY 는 왼쪽 모서리고, waypoint도 차량의 왼쪽 끝 모서리 기준이라 이를 그림으로 볼때 해석하기 쉽게 17.5,35 평행이동 시켜줌
+        for(int i =0; i < waypoints.size(); i++){
+            wp.setFillColor(sf::Color(50, 250, 50));
+            wp.setPosition(waypoints[i][0]+ 20,waypoints[i][1]+35);
+            app.draw(wp);
+        }
+
+
+        if(state ==1){
+            //creating main lane's waypoints
+            double lastwp = waypoints.back()[1];
+            int to_the_center = 0;
+            if(lastwp > 5){
+                if(new_lane_posx == -1){
+                    waypoints.push_back({LaneNumTransform(main_lane),0});
+                }
+                else{
+                    waypoints.push_back({new_lane_posx,0});
+                }
+            }
+
+
+
+            for(int i =0; i < waypoints_right.size(); i++){
+                wp.setFillColor(sf::Color(50, 50, 250));
+                vector <double> cartesian_pos;
+                cartesian_pos = frenet_to_cartesian(waypoints_right[i]);
+                wp.setPosition(cartesian_pos[0]+ 20+RacerX,cartesian_pos[1]+35+RacerY);
+                app.draw(wp);
+
+            }
+            for(int i =0; i < waypoints_left.size(); i++){
+                wp.setFillColor(sf::Color(50, 50, 250));
+                vector <double> cartesian_pos;
+                cartesian_pos = frenet_to_cartesian(waypoints_left[i]);
+                wp.setPosition(cartesian_pos[0]+ 20+RacerX,cartesian_pos[1]+35+RacerY);
+                app.draw(wp);
+
+            }
+            if(LaneNumTransform(main_lane) == Obs1X || LaneNumTransform(main_lane) == Obs2X ){
+                state = 2;
+                dir = collision_check(RacerX, RacerY,Obs1X,Obs1Y,Obs2X,Obs2Y,main_lane);
+                main_lane += dir;
+            }
+
+
+//            else if(main_lane != 2){
+//                to_the_center = collision_check2(RacerX,RacerY,Obs1X,Obs1Y,Obs2X,Obs2Y,main_lane);
+//                if(to_the_center != 0){
+//                    dir = to_the_center;
+//                    if(to_the_center ==1){
+//                        state =2;
+//                        main_lane +=1;
+//                        }
+//                    else if(to_the_center == -1){
+//                        state=2;
+//                        main_lane -=1;
+//                        }
+//                }
+//            }
+        }
+        else if(state == 2){
+            if(dir > 0){
+                vector <vector <double>> new_waypoints_right;
+                for(int i =0; i < waypoints_right.size(); i++){
+                    vector <double> cartesian_pos;
+                    cartesian_pos = frenet_to_cartesian(waypoints_right[i]);
+                    new_waypoints_right.push_back({cartesian_pos[0]+RacerX,cartesian_pos[1]+RacerY + 35});
+                }
+
+
+                waypoints = new_waypoints_right;
+                new_lane_posx = new_waypoints_right.back()[0];
+                new_lane_posy = new_waypoints_right.back()[1];
+            }
+            else{
+                vector <vector <double>> new_waypoints_left;
+                for(int i =0; i < waypoints_left.size(); i++){
+                    vector <double> cartesian_pos;
+                    cartesian_pos = frenet_to_cartesian(waypoints_left[i]);
+                    new_waypoints_left.push_back({cartesian_pos[0] + RacerX, cartesian_pos[1]+RacerY +35});
+                }
+                new_lane_posx = new_waypoints_left.back()[0];
+                new_lane_posy = new_waypoints_left.back()[1];
+                waypoints = new_waypoints_left;
+            }
+
+            for(int i = 160; i > 0; i = i -5){
+                waypoints.push_back({new_lane_posx,i});
+            }
+            state = 3;
+        }
+        else if (state ==3){
+            cout << new_lane_posy << endl;
+            double lastwp = waypoints.back()[1];
+            if(lastwp > 5){
+                waypoints.push_back({new_lane_posx,0});
+            }
+            new_lane_posy += 0.05;
+            if(new_lane_posy > RacerX){
+            state = 1;
+            }
+
+
+        }
+
+
         app.display();
     }
     return EXIT_SUCCESS;
@@ -548,6 +595,14 @@ int getRandomLane()
         if(k == 3){return 600;}
 
     }
+int LaneNumTransform(int num)
+{
+    if(num == 1){return 210;}
+    if(num == 2){return 340;}
+    if(num == 3){return 470;}
+    if(num == 4){return 600;}
+
+}
 random_device rdd;
 mt19937 genn(rdd());
 uniform_int_distribution<int> diss(-5,5);
